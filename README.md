@@ -390,3 +390,419 @@ Challenge 1: **Advanced Regular Expressions**
 - **Naming format:**  
     `Catch-All: NAME_HERE` (follow this format for consistency)
 - Older **Catch-all rules by LogRhythm** may include **Levels 1–4** in their names.
+**MPE Rule Builder – Test Center**
+- The **Test Center** is essential for **creating and validating MPE Rules**.
+- Use it to test whether your **RegEx correctly parses** data (e.g., VMID, VendorInfo) from log samples.
+- First, **import log samples** from the target Log Source Type.
+- Logs can be imported:
+	- From the **LogRhythm Log Viewer** (as shown in the course)
+	- Or **manually** added into the Test Center.
+**Importing and Testing Logs in the Test Center**
+- To add logs to the **Test Center**:
+	- Use **"Import Log Messages Manually"** to paste logs directly.
+	- Use **"Import LogRhythm Log Export (LLX) File"** to import logs from a `.llx` file.
+- From the same menu, you can:
+	- **Export** log messages.
+	- **Clear** unwanted log messages.
+- To test your RegEx:
+	- Click **"Test Selected log samples"** or **"Test All log samples"** to check if it parses the data correctly.
+**Test Center Results and Performance**
+- Test results appear in a **pop-up window**.
+- Compare:
+    - **Total logs processed** vs. **logs matched** by your RegEx.
+- Check the **average logs per second** rating:
+    - Aim for **Fantastic** or **Great** for optimal MPE performance.
+- If the rating is lower:
+    - **Tune your RegEx** to improve speed.
+    - Slow rules reduce the **Messages Per Second (MPS)** the Mediator can handle.
+**General RegEx Tips**
+- **Start with a reliable literal**: If a consistent text exists in all logs, begin your RegEx with it (e.g., use `EVID:<vmid>` instead of `^.*?EVID:<vmid>`).
+- **Use non-greedy matching (`.*?`)** to skip over unimportant parts of the log.
+- **Stop matching once key data is captured** — no need to parse the entire log line.
+- **Build and test incrementally** in the Rule Builder: match small parts, test, check metadata, and continue improving.
+#### Writing RegExes for Use in LogRhythm
+- Suppose you've noticed the following log message showing in a report as an **Unidentified** log or a log which has **no Classification** assigned in LogRhythm.
+```json
+10/11/2008 08:15:00.0154 EVID:4140 – A ‘catastrophic failure’ has occurred. Your network is hosed.
+```
+
+**Steps to create MPE**
+**Example 1**
+1. You did some research and determine that the log contains a new error code recently created by the vendor of your firewall device.
+2. You realize that because this is a brand new EVID code, it does not yet have an associated MPE Rule in LogRhythm.
+3. You begin by importing this log message into the MPE Rule Builder tool.
+4. To create a RegEx for use in LogRhythm, you need to begin by thinking in terms of metadata fields.
+5.  You'll use the _LogRhythm MPE Rule Builder Guide_ to locate the associated metadata field display name, tag, and default RegEx characters. download this document from [LogRhythm Community](https://community.logrhythm.com/t5/Training-and-Reference/Custom-MPE-Rules-using-Regular-Expression-Training-Materials/ta-p/40465) or [LogRhythm Docs](https://docs.logrhythm.com/lrsiem/docs/download-pdfs).
+6. Create Field for Vendor ID
+	1. You see Vendor Message ID listed in the **Display Field**. `<vmid>` is the **Tag** which uses the **Default Regex** **\w+** to match the text for the EVID number.
+	2. You note that the Vendor Message ID number appears after the text string "EVID:", and there is a space where the number ends.
+	3. The base Regular Expression for the MPE Rule is: `EVID:<vmid>` we call capture group name to apply saved regex with it.
+7. Error Field Parsing under venderinfo tag
+	1. The log message includes special characters (e.g., periods, apostrophes, spaces) that the default `\w+` RegEx can't match. To capture the full error text, the second tag is overloaded using:
+	2. `EVID:<vmid>\s(?<vendorinfo>.*?)$`
+**Example 2**
+
+```json
+02 20 2021 00:00:30 1.1.1.1 <LOC0:INFO> Feb 20 00:00:51 1,2021/02/20 00:00:51,0002C100617,TRAFFIC,end,33,2021/02/20 00:00:45,1.6.5.5,1.1.1.4,0.0.0.0,0.0.0.0,Inbound_vWire,,,ping,vsys1,untrust,trust,ethernet1/1,ethernet1/2,LogRhythmForwarder,2021/02/2000:00:51,176828,1,0,0,0,0,0x0,icmp,allow,120,120,120,2,2021/02/20 00:00:37,6,any,0
+```
+
+1. Enter a **Rule Name**.
+2. Walk Through Example: Palo Alto
+3. Assign an appropriate **Classification** and **Common Event** `Network Traffic`.
+4. Next, associate the new rule to the appropriate **Log Source Type**.
+5. Import the log message into the **Test Center** then **Import Log Massage Manually** and Past The Log to Import, Check box `wrap text` and press Ok.
+6. Determine the data to parse from the log and their associated LogRhythm metadata fields. We will use the following:
+	1. TRAFFIC – Vendor Message ID
+	2. 1.6.5.5 – IP Address (Origin)
+	3. 1.1.1.4 – IP Address (Impacted)
+	4. 0 – TCP/UDP Port (Origin)
+	5. 0 – TCP/UDP Port (Impacted)
+	6. icmp – Protocol
+	7. allow – One variation of what happened with this traffic; will be used in a Sub-rule.
+	    - For example, this traffic activity could have also been described as **deny** or **fail**.
+	    - Sub-rules will be created with a different Common Event for each type of activity
+	8.  Use the _LogRhythm MPE Rule Builder Parsing Guide_ to locate the associated tags.
+
+|**Data to Parse**|**Associated Tag**|
+|---|---|
+|TRAFFIC – Vendor Message ID|`vmid`|
+|1.6.5.5 – IP Address (Origin)|`sip`|
+|1.1.1.4 – IP Address (Impacted)|`dip`|
+|0 – TCP/UDP Port (Origin)|`sport`|
+|0 – TCP/UDP Port (Impacted)|`dport`|
+|icmp – Protocol|`protname`|
+|allow|to be used in Sub Rule Tag1|
+7. Begin entering the **Base-rule Regular Expression**.
+	1. Use wildcards to skip over unnecessary information.
+	2. Use literal characters to match text before and after the data to be parsed into the desired metadata field.
+	3. Click to **Test Selected** log message. Verify the data was parsed correctly into the metadata field.
+8.  Enter additional RegEx and tags to parse data into another metadata field. Click **Test Selected** log message. 
+9. Final Reg: `^.*,<vmid>,end,.*?:45,<sip>,<dip>,`
+10. Be sure to click **Save** for your new custom MPE Rule.
+***
+#### Exercises Part3: Create a New MPE Rule 
+**Create a new custom MPE Rule that matches the vendor ID message found in logs.**
+
+**Part One: Locate log messages containing EVID 0012**
+1. Open Client Console > Investigate Tap > Config New Investigation > Select Log Source Type > Select Search button > R_click on Entity and select "Check all displayed" all then Ok > Next without specific any event > Click Next to accept "Query default log repository" > Write Name of Search > Save Then Launch > after complete select Log viewer tap >  then select new EVID  > then select all logs > R_click and select "Copy Selected Logs to Rule Builder" > Yes.
+
+**Part Two: Use the MPE Rule Builder tool to create a new MPE Rule**
+1. Go to Rule Builder 
+2. Add Rule Name: EVID:0012
+3. Open Common Event and Select common event (Classification = Audit Access Success) and (Common Event = Object Accessed)
+4. Make Rule Status in **Development**
+5. Add Source Type from widget **Log Message Source Type Association**
+
+**Part Three: Determine tags required to parse metadata from logs**
+1. From Download PDF
+
+**Part Four: Write a new regular expression for your Custom MPE Rule**
+1. Click Test Center (We can see log Massage we copied it that contain EVID:0012)
+2. in Base-Rule Regular Expression write: `EVID:<vmid>\s(<dip>|(?<dname>/*?)):/*?user\s<login>\sfrom\s(<sip>|(?<sname>/*?)).*?\sObject\s=(?<object>.*?)\sSession ID:\s(?<session>.*?)$`
+3. Click Save
+4. Click Test All
+5. Review the result in Rule Builder Test Result pop-Up windows.
+	1. How many this logs matched the rules
+	2. Review the RegEx Average logs/second (total) must be (fantastic)
+
+**Part Five: Configure additional settings for your Custom MPE Rule**
+**Select Processing Settings**
+1. Ensure the "match multi-line logs message" is un checked 
+2. Ensure "Ignore Case when evaluating log message" is checked to simplified RegEx development and handle possible change in text by device.
+3. Ensure "Disable Rule Performance Monitoring" in un checked 
+**Since this Rule has both Source and Destination Tags**
+4. Host Context make it "tag Normal" this mean we will use default `<sip>, <sname>, <dip>, <dname>`
+5. Origan Host determine via make it "Tags"
+6. Impacted Host determine via make it "Tags"
+7. Impacted Application determine via make it "N/A": Since this rule is not parsing destination port or protocol, and it is not immediately obvious what application is generating the log, the **Impacted Application determined via:** setting should be set to **N/A**. This is the default setting.
+8. Save and close windows
+
+#### Note saved Search we can find it in tap "Windows"
+***
+## Enabling Custom Rules
+
+### Sub-rules
+- **Sub-rules** are used to extract **specific data** that may **not appear in all logs**, like event IDs, messages, or usernames.
+- They work **under a Base-rule** and refine log parsing when multiple logs match the same Base-rule.
+- Each Sub-rule includes a **specific RegEx** for extracting targeted fields.
+- A **Base-rule can have many Sub-rules** to help normalize log data more accurately.
+**Sub Rule Example**
+- Base-rule detects a system shutdown; Sub-rule identifies the **shutdown reason**.
+**How MPE Processes Logs**:
+- MPE checks the log against **Base-rules**.
+- If matched → it checks associated **Sub-rules**.
+- If a Sub-rule matches → the log is linked to that Sub-rule.
+- If no Sub-rules match → the log stays with the Base-rule.
+**Summary**
+- **Base-rules = general match**  
+- **Sub-rules = specific details**  
+- They work together for **better log normalization**.
+**Location**
+- Location of Sub-rules in the MPE Rule Builder
+**columns in Sub Rule**
+- Name: Each Sub-rule is given a unique name
+- Classification
+- Common Event
+
+**Creating Sub-rules**
+- You Must have existing Base Rule
+- Right-click inside the Sub-rule tab and select **New**.
+- **Note:** You can also Clone existing Sub-rules if you are creating multiples with the same Classification and Common Event, but perhaps with slight variations of VMIDs.
+- The **Sub-rule Properties** window opens, allowing you to configure your new Sub-rule.
+**Mapping Tag**
+- **Sub-rules** use **Mapping Tags** to define **criteria** that must be met in metadata fields for a log to match a specific **Common Event**.
+- These criteria are set in the **Match** column and checked against values in the **Value** column.
+- To match a log with a specific rule, we use something called **Mapping Tags**, which define:
+	- **Which field** to compare,
+	- **What value** to compare it to,
+	- And **how** the comparison should be done.
+
+| **Match Type**      | **Description**                                | **Example** |
+| ------------------- | ---------------------------------------------- | ----------- |
+| `Anything`          | Matches **any value** using wildcard `*`       | `*`         |
+| `Nothing`           | Matches an **empty or null** value             | (no value)  |
+| `Pattern`           | Matches a **Regex pattern**                    | `(this      |
+| `Equal To (=)`      | Matches an **exact value**                     | `=shutdown` |
+| `Not Equal To (!=)` | Matches **any value except** the specified one | `!=error`   |
+
+**Example**
+- If you have a log with a field named `Action`  and you want the Sub-rule to trigger **only when** the `Action` equals `"allow"`, you would configure it as (when action = allow): 
+	- **Field:** Action
+	- **Match:** Equal To
+	- **Value:** allow
+
+**The Sub-rule Tags in Mapping Tags**
+- The Field names highlighted are not metadata fields in LogRhythm.
+- Default RegEx = .*
+- Understanding Sub-rule Tags
+
+```Json
+^.*?(?:\d){2}:(?:\d){2}:(?:\d){2} .*?<process>\[\d*\]: FTP LOGIN (?<tag1>SUCCEEDED|FAILED) FROM (<sip>|(?<sname>)(\s|$)
+```
+
+```Json
+Log Messages:
+
+10 11 2008 22:54:53 1.1.1.2 <FTPD:NOTE> Oct 12 05:54:53 ftpd[87428]: FTP LOGIN
+SUCCEEDED FROM 21.1.1.1
+
+10 11 2008 22:54:55 1.1.1.2 <SAU2:NOTE> Oct 12 05:54:55 ftpd[87428]: FTP LOGIN
+FAILED FROM 21.1.1.1, apache
+
+```
+
+The Base-rule should have create two Sub-rules created for the `<tag1>` values captured from the logs
+- One Sub-rule will match logs containing **SUCCEEDED** login attempts. added in tag1
+- One Sub-rule will match logs containing **FAILED** login attempts. added in tag1
+***
+Example:
+
+```Json
+LOG MESSAGE:
+
+<Event xmlns-='[http://schemas.microsoft.com/win/2004/08/events/event](https://www.google.com/search?q=http://schemas.microsoft.com/win/2004/08/events/event)'><System><Provider Name='SQLISPackage100'/><EventID Qualifiers='16385'>12289</EventID><Level>Information</Level><Task>None</Task><Keywords>Classic</Keywords><TimeCreated SystemTime='2017-06-04T06:00:00.0000000Z'/><EventRecordID>25582324</EventRecordID><Channel>Application</Channel><Computer></Computer><Security UserID=''/></System><EventData>Package "" finished successfully.</EventData></Event>
+```
+
+```json
+BASE-RULE REGEX:
+
+Name='(?<tag2>.*?(SQLSERVER|SQLISPackage100|SQLAgent|SQL\$).*?)'.*?<EventID.*?>
+(?<vmid>\d+)<.*?Level(?<severity>.*?)<.*?Com.*?>(?<dname>.*?) (.*?\?)?/C((.?\r|\n)
+{3}succ.*?:(?<tag3>.*?) (\r|\n)(.*?(\r|\n)){2}sess\S+:(?<session>\d+)(.*?(\r|\n)){5}objS+:
+(?<objectname>\w+)(.*?(\r|\n)){3}serS+name:((?<domain>.*?)\\)?
+(?<login>\S+)(.*?(\r|\n)){9}object_name:(?<object>.*?)(\r|\n)staS+:(?<command>.*?)(\r|\n)?.*?pr
+.*? id of (?<processid>\d+)?
+(.*?Sch.*? Job '(?<object>.*?)')?.*?Status:
+(?<tag3>\w+)?(.*?for user '((?<domain>.*?)\\)?
+(?<login>.*?)'(.*?database
+'(?<object>.*?)')?.*?\[CLIENT:\s+(<sip>|(<)?(?<sname>.*?)>)?
+\])?
+(.*?UserID='((?<domain>[^/']+)\|\\)?(?<login>.*?)'(.*?Pac\w+
+"(?<object>.*?)")?.*?comS+
+(?<command>.*?)\.?.*?\((?<object>.*?)\.\).*?for
+```
+
+This Base-rule will match the pattern of the log and will capture the following data:
+- **SQLISPackage100** into the `<tag2>` field  
+- **12289** into the `<vmid>` field  
+- **Information** into the `<severity>` field  
+- **LRVM-XM** into the <`dname>` field  
+- **NTAUTHORITY** into the`<domain> `field  
+- **SYSTEM** into the `<login>` field 
+- **LR Backup Cleanup** into the `<object>` field
+***
+#### MPE Rule Processing Logic
+
+When creating new MPE rules (both Base and Sub-rules), they are automatically sorted in a processing order based on creation time — the first created is processed first.
+- Each rule set has its own processing order for Base and Sub-rules.
+- The **Sorter prioritizes more descriptive rules** first and leaves general or catch-all rules for last.
+- **Custom rules always take priority** over system (LogRhythm-created) rules:
+    - Custom Base-rules run before system Base-rules.
+	    - Custom Sub-rules where the value parsed for VMID should be a specific value by Sort Order
+		- All other Custom Sub-rules by Sort Order
+    - Custom Sub-rules run before system Sub-rules.
+		- Custom Sub-rules where the value parsed for VMID should be a specific value by Sort Order 
+		- System Sub-rules where the value parsed for VMID should be a specific value by Sort Order 
+		- All other Custom Sub-rules by Sort Order 
+		- All other System Sub-rules by Sort Order
+- **Sub-rule Sorting**
+	- **Sorting only matters** for Sub-rules using **wildcards or RegEx**.
+	- If all tag values are **explicitly defined**, sorting doesn't affect matching.
+**MPE processes Sub-rules in this order:**
+1. Custom Sub-rules with specific VMID.
+2. System Sub-rules with specific VMID.
+3. Custom Sub-rules without specific VMID.
+4. System Sub-rules without specific VMID.
+> Wildcard-heavy Sub-rules should be placed **last** to avoid overshadowing more specific rules.
+
+**Changing the Sort Order**
+- **LogRhythm auto-sorts MPE Rules**, but sorting behavior can be customized.
+- **System and Custom Sub-rules are always statically sorted.**
+- For **Custom Base-rules**, you can:
+    - Choose **static or auto-sorting**.
+    - Enforce **relative order** among auto-sorted custom rules.
+    - **Override** sort position relative to system Base-rules.
+    - Set a rule to sort **above all system rules**.
+**Why it's important:**
+- Sorting affects rule execution; one rule might **prevent others from processing**.
+- Use sorting control to ensure **priority and accuracy**.
+- **Avoid Catch-all rules** running too early; they may suppress more specific rules.
+**Recommendation:**
+- If multiple Base-rules cover the same log types, consider **merging them with better Sub-rules** instead of relying on sort order.
+#### Rule Library Browser
+- After creating new MPE Rules, you can **view them in the Rule Library**.
+- The Rule Library includes **over 7,000 System MPE Rules** provided by LogRhythm.
+- These rules are part of the **LogRhythm Knowledge Base (KB)**.
+- MPE Rules are organized and **listed by Log Message Source Type**.
+
+#### MPE Policy Settings
+**MPE Policy (Log Processing Policy)**
+- An **MPE Policy** is a **collection of MPE Rules** tied to a specific **Log Source Type** (e.g., Cisco PIX, Windows Security Logs).
+- It controls **how logs are processed**, including:
+    - **Which MPE rules** are applied.
+    - **Time to Live (TTL)** for logs.
+    - Whether logs are **archived or forwarded**.
+#### MPE Rule vs. MPE Policy
+
+| Aspect       | MPE Rule                  | MPE Policy                                    |
+| ------------ | ------------------------- | --------------------------------------------- |
+| Purpose      | Parses metadata from logs | Manages log/event handling & rule application |
+| Scope        | Specific parsing logic    | Broader processing logic for log source type  |
+| Editable via | MPE Policy Rule Editor    | Deployment Manager > MPE Policy Editor        |
+#### Key Points
+- **Only logs assigned an MPE Policy are processed** by MPE.
+- LogRhythm provides **default MPE Policies** (`LogRhythm Default`, possibly `V2.0` in optimization project).
+- A Log Source can have:
+    - **Only one MPE Policy**
+    - A policy that **matches the Log Source Type**
+#### Modifying MPE Policies
+1. Open **Client Console** with admin access.
+2. Go to **Deployment Manager > Log Processing Policies tab**.
+3. Select a policy → `File > Properties` → Opens **MPE Policy Editor**.
+4. Enable/disable rules, edit TTL, event forwarding via **MPE Policy Rule Editor**.
+5. Use **GLPR Manager** (Global Log Processing Rule Manager) for global changes:
+    - Found in **Deployment Manager > Tools > Administration > GLPR Manager**.
+#### Best Practice
+- Avoid placing Catch-all rules too early.
+- Use GLPR Manager for consistent, organization-wide processing behavior.
+***
+#### Log Source Type Manager
+- LogRhythm has **predefined Log Source Types** for hundreds of devices.
+- For **custom applications or new devices**, you may need to **create a custom Log Source Type** before building MPE Rules.
+#### Accessing the Manager
+- Found in **LogRhythm Console** via:  
+    `Tools > Knowledge > Log Source Type Manager`
+#### Steps to Create a Custom Log Source Type
+##### Step 1: Create New Log Source Type
+- Click **New** → opens **Log Source Type Properties**.
+- Assign:
+    - **Name**
+    - **Log Format** (critical for parsing):
+        - **Syslog**: Logs sent via Syslog protocol.
+        - **Flat File/Text File**: Plain text logs (no structured standard).
+> Choosing the wrong log format results in logs marked as **Unidentified** and unprocessed by MPE.
+##### Step 2: Save the Log Source Type
+- After verifying log format and naming, click **OK**.
+#### Tips & Naming Conventions
+- Use logical names starting with **Collection Method + Device/Vendor**:
+    - `API - Office 365 Management Activity`
+    - `Syslog - Palo Alto Firewall`
+    - `Flat File - Microsoft IIS (IIS Format) File`
+#### Additional Help
+- Refer to **Device Configuration Guides** for collection-type-specific Log Source Types.
+#### Best Practice
+- Always match the **log format** to your device's log generation method to ensure proper parsing and identification.
+***
+### Date Format Manager
+- The **Date Format Manager** is used to define how LogRhythm extracts **date/time** from log messages, using **RegEx-based patterns**.
+- Required when adding **custom Log Sources**, especially for **Flat Files** or logs with non-standard formats.
+#### How It Works
+- LogRhythm matches the **date pattern** using pre-defined **Date Formats** based on RegEx-like tokens.
+- You can:
+    - **Select an existing Date Format** from a similar device type.
+    - **Create a custom format** if no match exists.
+#### Example
+**Sample Log Message:**
+`06/28/2017 02:41:06 PM alert action: 1-28255 Win.Trojan.Kuluoz Detected sHost:150.94.138.231 dHost:195.190.211.155 email: frederick@cert.logrhythm.com`
+
+**Example**
+This is the associated Date Format used by LogRhythm to parse the date from the Flat File log message:
+`<M>/<d>/<yy> <h>:<m>:<s> <t>`
+#### Date Format Tokens
+
+|Token|Matches|
+|---|---|
+|`<M>`|Month (1 or 2 digits)|
+|`<d>`|Day (1 or 2 digits)|
+|`<yy>`|Year (2 or 4 digits)|
+|`<h>`|Hour|
+|`<m>`|Minute|
+|`<s>`|Second|
+|`<t>`|AM/PM|
+
+> These tokens **replace typical formats** like `MM/DD/YYYY HH:MM:SS`.
+
+#### Best Practice
+- If no existing Date Format matches your log’s timestamp:
+    - **Manually define** one using the **Help tab** in the Date Format Properties.
+- Always verify parsing accuracy to avoid **unidentified or improperly timed logs**.
+***
+#### Date and Time Parsing
+- If **Date/Time issues** occur, verify the **Log Source Type settings** are correct.
+- When selecting a Log Source Type, the **associated Date/Time RegEx** is applied automatically.
+- For **Flat File logs**, you **must manually select** the correct date/time format due to their varied structure.
+- LogRhythm offers **many predefined formats** to choose from.
+#### Important for MPE Rules
+- **Do NOT include date/time** in the **Base-rule RegEx**.
+- LogRhythm **automatically extracts and normalizes** time during processing.
+- This ensures **Time Normalization** and accurate log correlation.
+***
+### Steps After MPE Rule Creation
+
+1. **Set Rule to Test Mode**
+    - Change status of Base-rule and Sub-rules to Test in the Rule Builder.
+2. **Assign a Log Processing Policy**
+    - Review existing policies in Deployment Manager.
+    - Select the correct Log Source Type.
+    - Create a new policy if needed and associate it with the correct Log Source Type.
+3. **Enable the Rule**
+    - Edit the Log Processing Policy properties.
+    - Enable the rule and set the Risk-Based Priority (RBP).
+4. **Test the Rule**
+    - Verify the rule is successfully processed by MPE.
+    - If not, adjust the rule and retest.
+5. **Edit Rule Sorting**
+    - Place detailed and specific rules at the top.
+    - Place general or Catch-all rules at the bottom.
+6. **Promote to Production**
+    - Change the rule status from Test to Production in the Rule Builder.
+7. **Re-enable MPE Rule in Policy**
+    - In the Log Processing Policy, ensure the new custom rule is enabled and RBP is set.
+8. **Verify Parsing**
+    - Perform an Investigation or check the Dashboard to confirm logs are identified and metadata is parsed correctly.
+9. **Refine if Needed**
+    - Make necessary changes and repeat verification until logs are processed as expected.
+10. **Submit to LogRhythm Labs (Optional)**
+	- If the rule is reusable, submit it to LogRhythm Labs for review and potential inclusion in the official content.
+***
+
