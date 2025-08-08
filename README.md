@@ -14,9 +14,11 @@
 **Web Tools**
 1. [RegExr](https://regexr.com/)
 2. [Ihateregex](https://ihateregex.io/)
+
 **GUI Tools**
 - RegEx Buddy
 - Windows VM: [https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines/)
+
 **Visual Studio ADD-ONS**
 - vscode RegEx
 - RegexWorkBench
@@ -424,7 +426,7 @@ Challenge 1: **Advanced Regular Expressions**
 - **Build and test incrementally** in the Rule Builder: match small parts, test, check metadata, and continue improving.
 #### Writing RegExes for Use in LogRhythm
 - Suppose you've noticed the following log message showing in a report as an **Unidentified** log or a log which has **no Classification** assigned in LogRhythm.
-```json
+``` 
 10/11/2008 08:15:00.0154 EVID:4140 – A ‘catastrophic failure’ has occurred. Your network is hosed.
 ```
 
@@ -444,7 +446,7 @@ Challenge 1: **Advanced Regular Expressions**
 	2. `EVID:<vmid>\s(?<vendorinfo>.*?)$`
 **Example 2**
 
-```json
+``` 
 02 20 2021 00:00:30 1.1.1.1 <LOC0:INFO> Feb 20 00:00:51 1,2021/02/20 00:00:51,0002C100617,TRAFFIC,end,33,2021/02/20 00:00:45,1.6.5.5,1.1.1.4,0.0.0.0,0.0.0.0,Inbound_vWire,,,ping,vsys1,untrust,trust,ethernet1/1,ethernet1/2,LogRhythmForwarder,2021/02/2000:00:51,176828,1,0,0,0,0,0x0,icmp,allow,120,120,120,2,2021/02/20 00:00:37,6,any,0
 ```
 
@@ -578,11 +580,11 @@ Challenge 1: **Advanced Regular Expressions**
 - Default RegEx = .*
 - Understanding Sub-rule Tags
 
-```Json
+``` 
 ^.*?(?:\d){2}:(?:\d){2}:(?:\d){2} .*?<process>\[\d*\]: FTP LOGIN (?<tag1>SUCCEEDED|FAILED) FROM (<sip>|(?<sname>)(\s|$)
 ```
 
-```Json
+``` 
 Log Messages:
 
 10 11 2008 22:54:53 1.1.1.2 <FTPD:NOTE> Oct 12 05:54:53 ftpd[87428]: FTP LOGIN
@@ -599,13 +601,13 @@ The Base-rule should have create two Sub-rules created for the `<tag1>` values c
 ***
 Example:
 
-```Json
+``` 
 LOG MESSAGE:
 
 <Event xmlns-='[http://schemas.microsoft.com/win/2004/08/events/event](https://www.google.com/search?q=http://schemas.microsoft.com/win/2004/08/events/event)'><System><Provider Name='SQLISPackage100'/><EventID Qualifiers='16385'>12289</EventID><Level>Information</Level><Task>None</Task><Keywords>Classic</Keywords><TimeCreated SystemTime='2017-06-04T06:00:00.0000000Z'/><EventRecordID>25582324</EventRecordID><Channel>Application</Channel><Computer></Computer><Security UserID=''/></System><EventData>Package "" finished successfully.</EventData></Event>
 ```
 
-```json
+``` 
 BASE-RULE REGEX:
 
 Name='(?<tag2>.*?(SQLSERVER|SQLISPackage100|SQLAgent|SQL\$).*?)'.*?<EventID.*?>
