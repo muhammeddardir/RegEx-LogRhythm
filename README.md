@@ -1,3 +1,4 @@
+#### Introduction
 - Testing Rejex web app: [Link](https://regex101.com/) 
 	- Regular Expression: This is where you'll enter your RegEx.
 	- Test String: This is where you'll enter the strings that your RegEx needs to match.
@@ -9,6 +10,7 @@
 **RegEx Resources**
 - [Link1](http://www.regular-expressions.info/)
 - [Link2](https://www.cheatography.com/davechild/cheat-sheets/regular-expressions/)
+
 **Web Tools**
 1. [RegExr](https://regexr.com/)
 2. [Ihateregex](https://ihateregex.io/)
